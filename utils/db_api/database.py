@@ -1,214 +1,341 @@
-import asyncpg
+from sqlite3 import connect
 
 
 class DataBase:
-    def __init__(self, db_name, user, password, host, port):
-        self.db_name = db_name
-        self.user = user
-        self.password = password
-        self.host = host
-        self.port = port
-        self.pool = None
+    def __init__(self, db_name):
+        self.conn = connect(db_name)
+        self.cur = self.conn.cursor()
 
-    async def connect(self):
-        self.pool = await asyncpg.create_pool(
-            database=self.db_name,
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users(
+                tg_id INTEGER PRIMARY KEY,
+                fullname TEXT,
+                rating INTEGER
+            )
+            """
         )
 
-    async def disconnect(self):
-        if self.pool:
-            await self.pool.close()
-
-    async def execute_query(self, query, *args):
-        async with self.pool.acquire() as connection:
-            result = await connection.fetch(query, *args)
-            return result
-
-    async def create_tables(self):
-        if self.pool is None:
-            await self.connect()
-        async with self.pool.acquire() as connection:
-            # Создание таблиц (CREATE TABLE ...) для PostgreSQL
-
-            await connection.execute("""
-                CREATE TABLE IF NOT EXISTS users_posts(
-                tg_id INTEGER PRIMARY KEY,
-                post_id INTEGER,
-                message_id TEXT
-            )""")
-
-
-            await connection.execute('''
-                CREATE TABLE IF NOT EXISTS courses (
-                    course_id INT PRIMARY KEY,
-                    course_title VARCHAR(255),
-                    course_description TEXT,
-                    course_image BLOB,
-                    bot_token TEXT
-                );
-            ''')
-
-            await connection.execute('''
-                CREATE TABLE IF NOT EXISTS modules (
-                    module_id INT PRIMARY KEY,
-                    course_id INT REFERENCES courses(course_id),
-                    module_title VARCHAR(255),
-                    module_description TEXT,
-                    module_image BLOB,
-                    bot_token TEXT
-                );
-            ''')
-
-            await connection.execute('''
-                CREATE TABLE IF NOT EXISTS lessons (
-                    lesson_id INT PRIMARY KEY,
-                    module_id INT REFERENCES modules(module_id),
-                    course_id INT REFERENCES courses(course_id),
-                    lesson_title VARCHAR(255),
-                    lesson_description TEXT,
-                    audio BLOB,
-                    photo BLOB,
-                    video BLOB,
-                    video_note BLOB,
-                    document BLOB,
-                    document_name TEXT
-                );
-            ''')
-
-    async def add_user_post(self, tg_id: int, post_id: int) -> None:
-        if self.pool is None:
-            await self.connect()
-
-        async with self.pool.acquire() as connection:
-            await connection.execute(
-                f"""
-                INSERT OR REPLACE INTO users_posts
-                VALUES({tg_id}, {post_id}, {0})
-                """
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS words_rating(
+                tg_id INTEGER,
+                word TEXT,
+                word_rating INTEGER
             )
+            """
+        )
 
-    async def get_post_id(self, tg_id: int) -> int:
-        if self.pool is None:
-            await self.connect()
-
-        async with self.pool.acquire() as connection:
-            post_id = await connection.execute(
-                f"""
-                SELECT post_id FROM users_posts
-                WHERE tg_id={tg_id}'
-                """
-            ).fetchone()
-
-            if post_id is not None:
-                return post_id[0]
-
-    async def get_message_or_user(self, tg_id=None, message_id=None, id=None, message=None) -> int:
-        if self.pool is None:
-            await self.connect()
-
-        async with self.pool.acquire() as connection:
-            if message:
-                message_id_data = await connection.execute(
-                    f"""
-                    SELECT message_id FROM users_posts
-                    WHERE tg_id={tg_id}
-                    """
-                ).fetchone()
-                await connection.commit()
-
-                if message_id_data is not None:
-                    return message_id_data[0]
-
-            elif id:
-                tg_id_data = await connection.execute(
-                    f"""
-                    SELECT tg_id FROM users_posts
-                    WHERE message_id={message_id}
-                    """
-                ).fetchone()
-                await connection.commit()
-
-                if tg_id_data is not None:
-                    return tg_id_data[0]
-
-    async def add_user_message(self, tg_id: int, message_id: int) -> None:
-        if self.pool is None:
-            await self.connect()
-
-        async with self.pool.acquire() as connection:
-            await connection.execute(
-                f"""
-                INSERT OR REPLACE INTO users_messages
-                VALUES({tg_id}, {message_id})
-                """
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS polls(
+                poll_id INTEGER,
+                correct_id INTEGER,
+                time TEXT
             )
-            await connection.commit()
+            """
+        )
 
-    async def add_bot(self, bot_token: str, tg_id: int):
-        if self.pool is None:
-            await self.connect()
+    def create_words(self):
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS words(
+                level TEXT,
+                word TEXT,
+                picture TEXT,
+                translation TEXT,
+                type TEXT,
+                transcription TEXT,
+                example TEXT
+            )
+            """
+        )
+        self.conn.commit()
 
-        async with self.pool.acquire() as connection:
-            await connection.execute("""
-                INSERT OR REPLACE INTO bots
-                (bot_token, tg_id)
-                VALUES
-                (?, ?)
-            """, (bot_token, tg_id))
-    async def add_course(
-            self, course_id: int, name: str, description: str or None, description_image: bytes or None, bot_token: str
-    ):
-        if self.pool is None:
-            await self.connect()
+    def create_times(self):
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS times(
+                theme TEXT,
+                question TEXT,
+                option1 TEXT,
+                option2 TEXT,
+                option3 TEXT,
+                option4 TEXT,
+                option5 TEXT,
+                option6 TEXT,
+                option7 TEXT,
+                option8 TEXT,
+                option9 TEXT,
+                option10 TEXT
+            )
+            """
+        )
+        self.conn.commit()
 
-        async with self.pool.acquire() as connection:
-            await connection.execute("""
-                INSERT OR REPLACE INTO courses
-                (course_id, course_title, course_description, course_image, bot_token)
-                VALUES
-                (?, ?, ?, ?, ?)
-            """, (course_id, name, description, description_image, bot_token))
+    def delete_words(self):
+        self.cur.execute(
+            """
+            DROP TABLE words
+            """
+        )
+        self.conn.commit()
 
-    async def add_module(
-            self, module_id: int, course_id: int, module_title: str, module_description: str, module_image: bytes, bot_token: str
-    ):
-        if self.pool is None:
-            await self.connect()
+    def delete_times(self):
+        self.cur.execute(
+            """
+            DROP TABLE times
+            """
+        )
+        self.conn.commit()
 
-        async with self.pool.acquire() as connection:
-            await connection.execute("""
-               INSERT OR REPLACE INTO modules
-               (module_id, course_id, module_title, module_description, module_description, module_image, bot_token)
-               VALUES
-               (?, ?, ?, ?, ?, ?)
-            """, (module_id, course_id, module_title, module_description, module_image, bot_token))
+    def add_poll(self, poll_id: int, correct_id: int, time: str):
+        self.cur.execute(
+            """
+            INSERT INTO polls
+            (poll_id, correct_id, time)
+            VALUES
+            (?, ?, ?)
+            """,
+            (poll_id, correct_id, time)
+        )
 
-    async def add_lesson(
-            self, lesson_id: int, module_id: int, course_id: int, lesson_title: str, lesson_description: str,
-            audio: bytes or None, photo: bytes or None, video: bytes or None,
-            video_note: bytes or None, document: bytes or None, document_name: str or None
-    ):
-        if self.pool is None:
-            await self.connect()
+        self.conn.commit()
 
-        async with self.pool.acquire() as connection:
-            await connection.execute("""
-              INSERT OR REPLACE INTO modules
-              (lesson_id, module_id, course_id, lesson_title, lesson_description, 
-              audio, photo, video, video_note, document, document_name, bot_token)
-              VALUES
-              (?, ?, ?, ?, ?, ?)
-            """, (lesson_id, module_id, course_id, lesson_title, lesson_description,
-            audio, photo, video, video_note, document, document_name))
+    def get_answer(self, poll_id: int):
+        correct_id = self.cur.execute(
+            f"""
+            SELECT correct_id FROM polls
+            WHERE poll_id = {poll_id}
+            """
+        ).fetchone()
 
-    async def get_courses_ids(self):
-        if self.pool is None:
-            await self.connect()
-        async with self.pool.acquire() as connection:
-            courses_ids = await connection.execute("""
-              SELECT course_id FROM courses
-            """).fetchall()
+        return correct_id[0]
+
+    def get_poll_time(self, poll_id: int):
+        time = self.cur.execute(
+            f"""
+            SELECT time FROM polls
+            WHERE poll_id = {poll_id}
+            """
+        ).fetchone()
+
+        return time[0]
+
+    def delete_poll(self, poll_id: int):
+        self.cur.execute(
+            f"""
+            DELETE FROM polls
+            WHERE poll_id = {poll_id}
+            """
+        )
+        self.conn.commit()
+
+    def add_user(self, tg_id: int, fullname: str):
+        self.cur.execute(
+            """
+            INSERT INTO users
+            (tg_id, fullname, rating)
+            VALUES
+            (?, ?, ?)
+            """,
+            (tg_id, fullname, 0)
+        )
+
+        self.conn.commit()
+
+    def add_word(self, level, word, picture, translation, word_type, transcription, example):
+        self.cur.execute(
+            """
+            INSERT INTO words
+            (level, word, picture, translation, type, transcription, example)
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (level, word, picture, translation, word_type, transcription, example)
+        )
+
+        self.conn.commit()
+
+    def add_time(self, theme, question, option1, option2, option3, option4, option5, option6, option7, option8, option9, option10):
+        self.cur.execute(
+            """
+            INSERT INTO times
+            (theme, question, option1, option2, option3, option4, option5, option6, option7, option8, option9, option10)
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (theme, question, option1, option2, option3, option4, option5, option6, option7, option8, option9, option10)
+        )
+
+        self.conn.commit()
+
+
+    def get_users_ids(self):
+        users_ids = self.cur.execute(
+            """
+            SELECT tg_id FROM users
+            """
+        ).fetchall()
+
+        return [] if users_ids is None else [elem[0] for elem in users_ids]
+
+    def get_users_rating(self):
+        users = self.cur.execute(
+            """
+            SELECT tg_id, fullname, rating FROM users
+            """
+        ).fetchall()
+
+        return users
+
+    def rating_to_null(self, tg_id):
+        self.cur.execute(
+            f"""
+            UPDATE users
+            SET rating = 0
+            WHERE tg_id = {tg_id}
+            """
+        )
+
+    def add_word_rating(self, tg_id: int, word: str):
+        self.cur.execute(
+            """
+            INSERT INTO words_rating
+            (tg_id, word, word_rating)
+            VALUES
+            (?, ?, ?)
+            """,
+            (tg_id, word, 1)
+        )
+
+        self.conn.commit()
+
+    def get_rating_words(self, tg_id):
+        rate_words = self.cur.execute(
+            f"""
+            SELECT word FROM words_rating
+            WHERE tg_id = {tg_id}
+            """
+        ).fetchall()
+
+        return [] if rate_words is None else [elem[0] for elem in rate_words]
+
+    def plus_user_rating(self, tg_id):
+        self.cur.execute(
+            f"""
+            UPDATE users
+            SET rating = rating + 1
+            WHERE tg_id = {tg_id}
+            """
+        )
+
+        self.conn.commit()
+
+    def minus_user_rating(self, tg_id):
+        self.cur.execute(
+            f"""
+            UPDATE users
+            SET rating = rating - 1
+            WHERE tg_id = {tg_id} AND rating != 0
+            """
+        )
+
+        self.conn.commit()
+
+    def get_words_by_lvl(self, level: str, tg_id: int):
+        words = self.cur.execute(
+            f"""
+            SELECT word, picture, translation, type, transcription, example FROM words
+            WHERE level = '{level}'
+            """
+        ).fetchall()
+
+        tuples_list = []
+        for elem in words:
+            word = elem[0]
+            if self.get_word_rating(tg_id=tg_id, word=word) < 7:
+                tuples_list.append(elem)
+
+        return tuples_list
+
+    def get_times_data(self, time: str):
+        times = self.cur.execute(
+            f"""
+            SELECT question, option1, option2, option3, option4, option5, option6, option7, option8, option9, option10 FROM times
+            WHERE theme = '{time}'
+            """
+        ).fetchall()
+
+        return times
+
+    def get_time_buy_question(self, question: str):
+        theme = self.cur.execute(
+            f"""
+            SELECT theme FROM times
+            WHERE question = '{question}'
+            """
+        ).fetchone()
+
+        return theme[0]
+
+    def get_times_list(self):
+        times = self.cur.execute(
+            """
+            SELECT theme FROM times
+            """
+        ).fetchall()
+
+        return [] if times is None else list(map(lambda x: x.replace(" ", "_", 1), list(set([elem[0] for elem in times]))))
+
+    def plus_word_rating(self, tg_id, word):
+        self.cur.execute(
+            f"""
+            UPDATE words_rating
+            SET word_rating = word_rating + 1
+            WHERE tg_id = {tg_id}
+            AND word = '{word}'
+            """
+        )
+
+        self.conn.commit()
+
+    def minus_word_rating(self, tg_id, word):
+        self.cur.execute(
+            f"""
+            UPDATE words_rating
+            SET word_rating = word_rating - 1
+            WHERE tg_id = {tg_id} AND word_rating != 0
+            AND word = '{word}'
+            """
+        )
+
+        self.conn.commit()
+
+    def get_word_rating(self, tg_id, word):
+        rating = self.cur.execute(
+            f"""
+            SELECT word_rating FROM words_rating
+            WHERE tg_id = {tg_id} AND word = '{word}'
+            """
+        ).fetchone()
+
+        return 0 if rating is None else rating
+
+    def get_words(self):
+        words = self.cur.execute(
+            """
+            SELECT word FROM words
+            """
+        ).fetchall()
+
+        return [] if words is None else [elem[0] for elem in words]
+
+    def get_questions(self):
+        questions = self.cur.execute(
+            """
+            SELECT question FROM times
+            """
+        ).fetchall()
+
+        return [] if questions is None else [elem[0] for elem in questions]

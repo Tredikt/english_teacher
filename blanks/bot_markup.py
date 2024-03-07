@@ -2,119 +2,56 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 menu = InlineKeyboardMarkup().add(
     InlineKeyboardButton(
-        text="Библиотека",
-        callback_data="library"
+        text="🏆Рейтинг🏆",
+        callback_data="rating"
     )
 ).add(
     InlineKeyboardButton(
-        text="Получить курс",
-        callback_data="get_course"
+        text="Слова",
+        callback_data="words"
     )
 ).add(
     InlineKeyboardButton(
-        text="Купить подписку",
-        callback_data="buy_subscription"
-    )
-).add(
-    InlineKeyboardButton(
-        text="Задать вопрос",
-        callback_data="ask_question"
+        text="Времена",
+        callback_data="times"
     )
 )
 
 to_menu = InlineKeyboardMarkup().add(
     InlineKeyboardButton(
-        text="Меню",
+        text="В меню",
         callback_data="menu"
     )
 )
 
-
-back_to_modules = InlineKeyboardMarkup().add(
+word_keyboard = InlineKeyboardMarkup().add(
     InlineKeyboardButton(
-        text="Назад",
-        callback_data="module_settings"
-    )
-)
-
-back_to_lessons = InlineKeyboardMarkup().add(
-    InlineKeyboardButton(
-        text="Назад",
-        callback_data="lesson_settings"
-    )
-)
-
-bot_settings_mp = (InlineKeyboardMarkup().add(
-    InlineKeyboardButton(
-        text="Изменить название курса",
-        callback_data="edit_course_name"
+        text="А1",
+        callback_data="A1"
     )
 ).add(
     InlineKeyboardButton(
-        text="Изменить описание курса",
-        callback_data="edit_course_description"
+        text="A2",
+        callback_data="A2"
     )
 ).add(
     InlineKeyboardButton(
-        text="Изменить фото курса",
-        callback_data="edit_course_image"
+        text="B1",
+        callback_data="B1"
     )
 ).add(
     InlineKeyboardButton(
-        text="Настройки модулей",
-        callback_data="modules_settings"
+        text="B2",
+        callback_data="B2"
     )
 ).add(
     InlineKeyboardButton(
-        text="Добавить модуль",
-        callback_data="edit_module"
+        text="C1",
+        callback_data="C1"
     )
 ).add(
     InlineKeyboardButton(
-        text="Назад",
-        callback_data="back_to_bots_list"
-    )
-))
-
-
-modules_settings_mp = InlineKeyboardMarkup().add(
-    InlineKeyboardButton(
-        text="Добавить урок в этот модуль",
-        callback_data="add_lesson"
-    )
-).add(
-    InlineKeyboardButton(
-        text="Удалить модуль",
-        callback_data="delete_module"
-    )
-).add(
-    InlineKeyboardButton(
-        text="Назад",
-        callback_data="back_to_bot_settings"
-    )
-)
-
-lessons_settings_mp = InlineKeyboardMarkup().add(
-    InlineKeyboardButton(
-        text="Добавить урок",
-        callback_data="add_lesson"
-    )
-).add(
-    InlineKeyboardButton(
-        text="Изменить фото урока",
-        callback_data="edit_lesson_photo"
-    )
-).add(
-    InlineKeyboardButton(
-        text="Удалить урок",
-        callback_data="delete_lesson"
-    )
-)
-
-
-back_to_settings = InlineKeyboardMarkup().add(
-    InlineKeyboardButton(
-        text="Назад",
-        callback_data="back_to_bot_settings"
+        text="В меню",
+        callback_data="menu"
     )
 )
